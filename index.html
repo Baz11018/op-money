@@ -28,7 +28,7 @@ nav button{border:0;background:none;color:#969aa4;font-size:10.5px;min-width:58p
 .view{display:none}.view.active{display:block}
 .modal{position:fixed;inset:0;background:#11182788;display:none;align-items:flex-end;z-index:20}.sheet{width:100%;max-width:480px;margin:auto;background:#f8f9fc;border-radius:27px 27px 0 0;padding:19px 18px calc(24px + env(safe-area-inset-bottom));max-height:94vh;overflow:auto}.sheet h2{margin:4px 0 17px}
 .categoryGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.catButton{border:0;background:#fff;border-radius:18px;padding:14px 5px 11px;box-shadow:0 4px 14px #27364a0c;min-height:102px;color:var(--text)}.catButton .iconBox{width:54px;height:54px;border-radius:17px;margin:0 auto 8px}.catButton .iconBox svg{width:28px;height:28px}.catButton span{font-size:12px;font-weight:600;display:block;white-space:normal}
-.back{border:0;background:none;color:var(--accent);padding:0;margin-bottom:10px}.field{margin:12px 0}.field label{display:block;font-size:11px;color:var(--muted);margin:0 0 6px 3px;font-weight:650}.field input,.field select{width:100%;padding:14px;border:1px solid var(--line);border-radius:13px;font-size:17px;background:#fff}.actions{display:flex;gap:10px;margin-top:18px}.secondary,.primary{flex:1;padding:14px;border-radius:14px;font-size:16px}.secondary{border:1px solid var(--line);background:#fff}.primary{border:0;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:650}
+.back{border:0;background:none;color:var(--accent);padding:0;margin-bottom:10px}.field{margin:12px 0}.field label{display:block;font-size:11px;color:var(--muted);margin:0 0 6px 3px;font-weight:650}.field input,.field select{width:100%;padding:14px;border:1px solid var(--line);border-radius:13px;font-size:17px;background:#fff}.actions{display:flex;gap:10px;margin-top:18px}.secondary,.primary{flex:1;padding:14px;border-radius:14px;font-size:16px}.secondary{border:1px solid var(--line);background:#fff}.primary{border:0;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:650}.dataBtn{width:100%;border:0;background:none;padding:15px 0;text-align:left;font-size:15px;color:var(--accent)}.dataBtn+.dataBtn{border-top:1px solid var(--line)}.dataNote{font-size:11px;color:var(--muted);padding:0 0 13px}
 .monthNav{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:18px;padding:12px 14px;margin-bottom:14px;border:1px solid #eceef3}.monthNav button{border:0;background:none;color:var(--accent);font-size:21px}.monthNav b{font-size:16px}
 .logGroup{margin-bottom:20px}.logDate{font-size:12px;color:var(--muted);font-weight:650;margin:13px 3px 7px;text-transform:uppercase}.summaryLine{display:flex;justify-content:space-between;font-size:14px;margin:7px 0}.positive{color:#24a865}.negative{color:#df5353}
 .chartTitle{font-weight:700;margin-bottom:16px}.bigStat{font-size:34px;font-weight:780;letter-spacing:-1px}.muted{color:var(--muted)}.barRow{margin:15px 0}.barHead{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:7px}.barBg{height:12px;background:#eceef2;border-radius:999px;overflow:hidden}.barFill{height:100%;border-radius:999px}.chartFoot{color:var(--muted);font-size:12px;margin-top:8px}
@@ -66,7 +66,13 @@ nav button{border:0;background:none;color:#969aa4;font-size:10.5px;min-width:58p
 <div class="field"><label>MONTH START DAY</label><select id="startDay"></select></div>
 <button class="primary" style="width:100%" onclick="saveSettings()">Save</button></div>
 <div class="sectionTitle"><b>Categories</b><button class="link" onclick="openNewCategory()">＋ Add category</button></div><div class="card" id="settingsCategories"></div>
-<div class="sectionTitle"><b>Data</b></div><div class="card"><button class="link danger" style="padding:15px 0" onclick="resetData()">Reset all data</button></div>
+<div class="sectionTitle"><b>Data & Backup</b></div><div class="card">
+<button class="dataBtn" onclick="exportBackup()">Export backup</button>
+<button class="dataBtn" onclick="document.getElementById('backupFile').click()">Import backup</button>
+<input id="backupFile" type="file" accept=".json,application/json" style="display:none" onchange="importBackup(event)">
+<div class="dataNote">Backup includes your budget, expenses, recurring costs and categories.</div>
+<button class="dataBtn danger" onclick="resetData()">Reset all data</button>
+</div>
 </main>
 </div>
 
@@ -165,6 +171,57 @@ function shiftLogMonth(n){logOffset+=n;renderLog()}
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));({home:nHome,logView:nLog,statsView:nStats,settings:nSettings}[id]||nHome).classList.add('active');if(id==='settings'){budgetInput.value=data.budget;startDay.value=data.startDay}render()}
 function saveSettings(){data.budget=parseFloat(budgetInput.value.replace(',','.'))||0;data.startDay=Number(startDay.value);save();showView('home')}
 function closeModals(){document.querySelectorAll('.modal').forEach(x=>x.style.display='none')}
+
+function exportBackup(){
+  const payload={
+    app:"OP Money",
+    version:1,
+    exportedAt:new Date().toISOString(),
+    data:data
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date();
+  const stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  a.href=url;
+  a.download='OP-Money-Backup-'+stamp+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),500);
+}
+function importBackup(event){
+  const file=event.target.files&&event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    try{
+      const parsed=JSON.parse(reader.result);
+      const incoming=parsed&&parsed.data?parsed.data:parsed;
+      if(!incoming||typeof incoming!=='object'||!Array.isArray(incoming.transactions)||!Array.isArray(incoming.recurring)||!Array.isArray(incoming.categories)){
+        throw new Error('Invalid backup');
+      }
+      if(!confirm('Import this backup? Your current OP Money data on this device will be replaced.')){event.target.value='';return;}
+      data={
+        budget:Number(incoming.budget)||0,
+        startDay:Number(incoming.startDay)||1,
+        transactions:incoming.transactions,
+        recurring:incoming.recurring,
+        categories:incoming.categories
+      };
+      if(!data.categories.includes('Other'))data.categories.push('Other');
+      save();
+      render();
+      showView('home');
+      alert('Backup imported successfully.');
+    }catch(e){
+      alert('This file is not a valid OP Money backup.');
+    }
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
 function resetData(){if(confirm('Delete all budget data?')){data={budget:0,startDay:1,transactions:[],recurring:[],categories:[...baseCategories]};save();render();showView('settings')}}
 for(let i=1;i<=28;i++){let o=document.createElement('option');o.value=i;o.textContent=i===1?'1st (calendar month)':i;startDay.appendChild(o)}
 render();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
